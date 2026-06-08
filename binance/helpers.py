@@ -1,11 +1,14 @@
+import asyncio
 from decimal import Decimal
+import json
 from typing import Union, Optional, Dict
 
 import dateparser
-import math
 import pytz
 
-from datetime import datetime
+from datetime import datetime, timezone
+
+from binance.exceptions import UnknownDateFormat
 
 
 def date_to_milliseconds(date_str: str) -> int:
@@ -18,9 +21,12 @@ def date_to_milliseconds(date_str: str) -> int:
     :param date_str: date in readable format, i.e. "January 01, 2018", "11 hours ago UTC", "now UTC"
     """
     # get epoch value in UTC
-    epoch: datetime = datetime.utcfromtimestamp(0).replace(tzinfo=pytz.utc)
+    epoch: datetime = datetime.fromtimestamp(0, timezone.utc)
     # parse our date string
-    d: Optional[datetime] = dateparser.parse(date_str, settings={'TIMEZONE': "UTC"})
+    d: Optional[datetime] = dateparser.parse(date_str, settings={"TIMEZONE": "UTC"})
+    if not d:
+        raise UnknownDateFormat(date_str)
+
     # if the date is not timezone aware apply UTC timezone
     if d.tzinfo is None or d.tzinfo.utcoffset(d) is None:
         d = d.replace(tzinfo=pytz.utc)
@@ -41,6 +47,7 @@ def interval_to_milliseconds(interval: str) -> Optional[int]:
 
     """
     seconds_per_unit: Dict[str, int] = {
+        "s": 1,
         "m": 60,
         "h": 60 * 60,
         "d": 24 * 60 * 60,
@@ -52,7 +59,9 @@ def interval_to_milliseconds(interval: str) -> Optional[int]:
         return None
 
 
-def round_step_size(quantity: Union[float, Decimal], step_size: Union[float, Decimal]) -> float:
+def round_step_size(
+    quantity: Union[float, Decimal], step_size: Union[float, Decimal]
+) -> float:
     """Rounds a given quantity to a specific step size
 
     :param quantity: required
@@ -67,6 +76,29 @@ def round_step_size(quantity: Union[float, Decimal], step_size: Union[float, Dec
 def convert_ts_str(ts_str):
     if ts_str is None:
         return ts_str
-    if type(ts_str) == int:
+    if isinstance(ts_str, int):
         return ts_str
     return date_to_milliseconds(ts_str)
+
+
+def convert_list_to_json_array(l):
+    if l is None:
+        return l
+    res = json.dumps(l)
+    return res.replace(" ", "")
+
+
+def get_loop():
+    """check if there is an event loop in the current thread, if not create one
+    inspired by https://stackoverflow.com/questions/46727787/runtimeerror-there-is-no-current-event-loop-in-thread-in-async-apscheduler
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        return loop
+    except RuntimeError as e:
+        if str(e).startswith("There is no current event loop in thread"):
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            return loop
+        else:
+            raise

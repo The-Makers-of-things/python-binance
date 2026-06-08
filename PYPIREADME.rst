@@ -1,9 +1,3 @@
-=================================
-Welcome to python-binance v1.0.15
-=================================
-
-Updated 27th Sept 2021
-
 .. image:: https://img.shields.io/pypi/v/python-binance.svg
     :target: https://pypi.python.org/pypi/python-binance
 
@@ -52,7 +46,7 @@ Features
 - Implementation of all General, Market Data and Account endpoints.
 - Asyncio implementation
 - Testnet support for Spot, Futures and Vanilla Options
-- Simple handling of authentication
+- Simple handling of authentication include RSA keys
 - No need to generate timestamps yourself, the wrapper does it for you
 - Response exception handling
 - Websocket handling with reconnection and multiplexed connections
